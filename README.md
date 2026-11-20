@@ -69,6 +69,30 @@ make profile-b       # Profile NYC 311 raw data
 make download-data   # Download NYC 311 2023 data
 ```
 
+## Interactive CLI Usage
+
+### Project A — Income Tax Engine CLI
+```bash
+# 1. Plain-language input (English / Hinglish):
+python -m project_a tax --text "Mera salary 15 LPA hai, Mumbai me rent 30k bharta hu"
+
+# 2. Incomplete input (automatically triggers clarifying questions):
+python -m project_a tax --text "I pay 30,000 rent in Mumbai. How much tax do I save?"
+
+# 3. Direct structured calculation (FY 2024-25 or FY 2025-26):
+python -m project_a tax --gross 1500000 --rent 360000 --metro --c80 150000 --fy 2024-25
+python -m project_a tax --gross 1500000 --rent 360000 --metro --c80 150000 --fy 2025-26
+```
+
+### Project B — Data Quality Pipeline CLI
+```bash
+# Run 3-tier hybrid pipeline (Rules -> Stats -> LLM) on sample batch:
+python -m project_b pipeline --batch 1000
+
+# Profile NYC 311 raw dataset:
+python -m project_b profile
+```
+
 ## Requirements
 
 - Python 3.10+

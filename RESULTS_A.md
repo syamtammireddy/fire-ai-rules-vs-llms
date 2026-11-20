@@ -1,5 +1,8 @@
 # Project A Results — Income-Tax Engine
 
+**Author**: Syam Tammireddy (`syamtammireddi@gmail.com`)  
+**Fire AI Take-Home Assignment**
+
 ## Task 2: Three Implementations Comparison
 
 ### Accuracy (% of 200+ test cases matching rupee-exact)

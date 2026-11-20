@@ -1,5 +1,8 @@
 # Project B Results — Data-Quality Checks
 
+**Author**: Syam Tammireddy (`syamtammireddi@gmail.com`)  
+**Fire AI Take-Home Assignment**
+
 ## Task 1: Raw Data Profiling — Quality Problems Found
 
 ### Dataset Overview

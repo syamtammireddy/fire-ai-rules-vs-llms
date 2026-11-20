@@ -1,6 +1,9 @@
 # Decision Matrix — Rule vs LLM Justification
 
-> Every row ties a component to a measurement. The goal is not to use the most AI — it is to use the right tool for each job.
+**Author**: Syam Tammireddy (`syamtammireddi@gmail.com`)  
+**Fire AI Take-Home Assignment**
+
+> Every row ties a component to an empirical measurement. My goal is not to use the most AI — it is to defend the right tool for each job.
 
 ## Project A — Income-Tax Engine
 
