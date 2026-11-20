@@ -19,6 +19,17 @@ from project_b.detectors.llm_detectors import LLMDetectors
 
 
 @dataclass
+class TenantQualityConfig:
+    """Multi-tenant data quality policy configuration."""
+    tenant_id: str = "default_nyc_311"
+    z_score_threshold: float = 2.5
+    fuzzy_dedup_threshold: int = 85
+    sample_llm_limit: int = 20
+    quarantine_on_schema_error: bool = True
+    max_llm_budget_per_batch_dollars: float = 0.50
+
+
+@dataclass
 class PipelineMetrics:
     total_rows: int = 0
     layer1_flags: Dict[str, int] = field(default_factory=dict)
@@ -31,16 +42,23 @@ class PipelineMetrics:
 
 
 class HybridDataQualityPipeline:
-    def __init__(self, reference_df: pd.DataFrame | None = None, enable_llm: bool = True):
+    def __init__(
+        self,
+        reference_df: pd.DataFrame | None = None,
+        enable_llm: bool = True,
+        config: TenantQualityConfig | None = None,
+    ):
         self.rules = RuleDetectors(reference_df)
         self.stats = StatisticalDetectors(reference_df)
         self.llm = LLMDetectors() if enable_llm else None
         self.enable_llm = enable_llm
+        self.config = config or TenantQualityConfig()
 
-    def run(self, df: pd.DataFrame, sample_llm_limit: int = 20) -> PipelineMetrics:
+    def run(self, df: pd.DataFrame, sample_llm_limit: int | None = None) -> PipelineMetrics:
         """Runs the 3-tiered data quality pipeline over an incoming batch."""
         t_start = time.perf_counter()
         metrics = PipelineMetrics(total_rows=len(df))
+        llm_limit = sample_llm_limit if sample_llm_limit is not None else self.config.sample_llm_limit
 
         # =========================================================================
         # LAYER 1: Pure Rule-Based Screening (Every Row, $0 Cost)
@@ -92,11 +110,15 @@ class HybridDataQualityPipeline:
         # LAYER 2: Statistical Batch Analysis ($0 Cost)
         # =========================================================================
         # 1. Null rate z-score spikes
-        null_spikes = self.stats.detect_null_spikes_zscore(df, col_name="incident_zip")
+        null_spikes = self.stats.detect_null_spikes_zscore(
+            df, col_name="incident_zip", z_threshold=self.config.z_score_threshold
+        )
         metrics.layer2_flags["null_spike_agencies"] = len(null_spikes)
 
         # 2. Near-duplicate fuzzy candidates (with spatio-temporal bucketing)
-        fuzzy_pairs = self.stats.detect_near_duplicates_fuzzy(df, similarity_threshold=85)
+        fuzzy_pairs = self.stats.detect_near_duplicates_fuzzy(
+            df, similarity_threshold=self.config.fuzzy_dedup_threshold
+        )
         metrics.layer2_flags["near_duplicate_candidate_pairs"] = len(fuzzy_pairs)
 
         # 3. Multivariate co-occurrence anomalies (Agency vs Complaint Type priors)
@@ -108,9 +130,9 @@ class HybridDataQualityPipeline:
         # LAYER 3: Targeted LLM Semantic Review (Flagged Rows Only, Controlled Cost)
         # =========================================================================
         if self.enable_llm and self.llm is not None:
-            # A. Review resolution status contradictions (capped to sample_llm_limit)
+            # A. Review resolution status contradictions (capped to llm_limit)
             if status_rule_flags:
-                sample_status_idx = status_rule_flags[:sample_llm_limit]
+                sample_status_idx = status_rule_flags[:llm_limit]
                 status_candidates = [
                     {
                         "unique_key": str(df.at[i, "unique_key"]),
@@ -129,7 +151,7 @@ class HybridDataQualityPipeline:
 
             # B. Review near-duplicate pairs
             if fuzzy_pairs:
-                sample_pairs = fuzzy_pairs[:sample_llm_limit]
+                sample_pairs = fuzzy_pairs[:llm_limit]
                 pair_candidates = [
                     {
                         "pair_id": f"{p[0]}_{p[1]}",
@@ -155,7 +177,7 @@ class HybridDataQualityPipeline:
 
             # C. Review PII candidates
             if pii_regex_flags:
-                sample_pii_idx = pii_regex_flags[:sample_llm_limit]
+                sample_pii_idx = pii_regex_flags[:llm_limit]
                 pii_candidates = [
                     {
                         "id": str(i),

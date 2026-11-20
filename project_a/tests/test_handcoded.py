@@ -348,3 +348,17 @@ def test_proactive_tax_advisor_and_headroom():
     advice = generate_proactive_advice(inp, res)
     assert len(advice) >= 1
     assert any(any(k in a.lower() for k in ["nps", "80c", "regime", "deduction", "tax"]) for a in advice)
+
+
+def test_break_even_deductions_calculation():
+    from project_a.rules_handcoded import compute_break_even_deductions
+    # Gross 15 LPA in FY 24-25 requires ~4,58,332 in total deductions for Old to equal New
+    be_15l = compute_break_even_deductions(1500000, "2024-25")
+    assert 455000 <= be_15l <= 460000
+
+    # User with only 50k standard deduction has a gap
+    inp = TaxpayerInput(gross_salary=1500000, basic_salary=750000)
+    res = compute_tax(inp, "2024-25")
+    assert res.break_even_deductions == be_15l
+    assert res.break_even_gap > 400000
+    assert "break-even deduction threshold" in res.break_even_analysis.lower()

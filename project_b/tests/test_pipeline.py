@@ -36,3 +36,22 @@ def test_hybrid_pipeline_corrupted_data(sample_data):
     assert metrics.layer1_flags["lat_lon_swap"] > 0
     assert metrics.layer1_flags["exact_duplicates"] > 0
     assert len(metrics.quarantined_row_indices) > 0
+
+
+def test_hybrid_pipeline_tenant_config(sample_data):
+    from project_b.hybrid_pipeline import TenantQualityConfig
+    custom_cfg = TenantQualityConfig(
+        tenant_id="tenant_hpd_custom",
+        z_score_threshold=3.5,
+        fuzzy_dedup_threshold=95,
+        sample_llm_limit=5,
+    )
+    pipeline = HybridDataQualityPipeline(
+        reference_df=sample_data,
+        enable_llm=False,
+        config=custom_cfg,
+    )
+    assert pipeline.config.tenant_id == "tenant_hpd_custom"
+    assert pipeline.config.z_score_threshold == 3.5
+    metrics = pipeline.run(sample_data)
+    assert metrics.total_rows == len(sample_data)

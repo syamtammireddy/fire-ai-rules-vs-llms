@@ -71,53 +71,36 @@ class RuleDetectors:
             "explanation": f"Missing expected columns: {missing}; Unexpected: {unexpected}" if (missing or unexpected) else "Schema intact",
         }
 
-    # 2. Type Anomalies in Numeric Columns
+    # 2. Type Anomalies in Numeric Columns (Vectorized)
     def detect_type_anomalies(self, df: pd.DataFrame) -> List[int]:
         if "latitude" not in df.columns:
             return []
-        
-        # Check if values in latitude cannot be parsed as floats
-        flagged = []
-        for idx, val in df["latitude"].items():
-            if pd.notnull(val):
-                try:
-                    float(val)
-                except ValueError:
-                    flagged.append(idx)
-        return flagged
+        s = pd.to_numeric(df["latitude"], errors="coerce")
+        bad_mask = s.isna() & df["latitude"].notna()
+        return df[bad_mask].index.tolist()
 
-    # 3. Date Format Switch (Regex check)
+    # 3. Date Format Switch (Vectorized Regex)
     def detect_date_format_switch(self, df: pd.DataFrame) -> List[int]:
         if "created_date" not in df.columns:
             return []
-        flagged = []
-        for idx, val in df["created_date"].items():
-            if pd.notnull(val) and not ISO_TIMESTAMP_REGEX.match(str(val).strip()):
-                flagged.append(idx)
-        return flagged
+        s_date = df["created_date"].astype(str).str.strip()
+        bad_mask = df["created_date"].notna() & ~s_date.str.match(ISO_TIMESTAMP_REGEX, na=False)
+        return df[bad_mask].index.tolist()
 
-    # 4. Lat/Lon Swap (Bounding box check)
+    # 4. Lat/Lon Swap (Vectorized Bounding Box Check)
     def detect_lat_lon_swap(self, df: pd.DataFrame) -> List[int]:
         if "latitude" not in df.columns or "longitude" not in df.columns:
             return []
-        flagged = []
-        for idx in df.index:
-            lat_raw = df.at[idx, "latitude"]
-            lon_raw = df.at[idx, "longitude"]
-            try:
-                lat = float(lat_raw)
-                lon = float(lon_raw)
-                # In NYC: lat is positive (~40.7), lon is negative (~ -73.9)
-                # If lat < 0 and lon > 0: definitely swapped!
-                if lat < 0 < lon:
-                    flagged.append(idx)
-                elif not (NYC_LAT_MIN <= lat <= NYC_LAT_MAX) and (NYC_LON_MIN <= lon <= NYC_LON_MAX):
-                    # Out of bounds or flipped
-                    if NYC_LON_MIN <= lat <= NYC_LON_MAX and NYC_LAT_MIN <= lon <= NYC_LAT_MAX:
-                        flagged.append(idx)
-            except (ValueError, TypeError):
-                continue
-        return flagged
+        lat = pd.to_numeric(df["latitude"], errors="coerce")
+        lon = pd.to_numeric(df["longitude"], errors="coerce")
+        valid = lat.notna() & lon.notna()
+        swapped_sign = (lat < 0) & (lon > 0)
+        flipped_range = (
+            (lat >= NYC_LON_MIN) & (lat <= NYC_LON_MAX) &
+            (lon >= NYC_LAT_MIN) & (lon <= NYC_LAT_MAX)
+        )
+        bad_mask = valid & (swapped_sign | flipped_range)
+        return df[bad_mask].index.tolist()
 
     # 5. Exact Duplicates
     def detect_exact_duplicates(self, df: pd.DataFrame) -> List[int]:

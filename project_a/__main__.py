@@ -106,7 +106,11 @@ def main():
         print(f"==================================================")
         print(f" RECOMMENDATION:      {res.recommended_regime}")
         print(f" POTENTIAL SAVINGS:   ₹{res.savings:,.0f}")
+        print(f" BREAK-EVEN DEDUCTION: ₹{res.break_even_deductions:,.0f} (Indifference Point)")
+        if res.break_even_gap > 0:
+            print(f" DEDUCTION DEFICIT:   ₹{res.break_even_gap:,.0f} more needed for Old Regime to win")
         print(f" Summary: {res.explanation}")
+        print(f" Break-Even: {res.break_even_analysis}")
 
         if args.advisor or True:
             from project_a.tax_advisor import generate_proactive_advice

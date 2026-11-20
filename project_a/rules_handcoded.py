@@ -319,6 +319,51 @@ def compute_new_regime(
     )
 
 
+def compute_break_even_deductions(
+    gross_salary: float,
+    fy: str = "2024-25",
+    age_category: AgeCategory = AgeCategory.BELOW_60,
+) -> float:
+    """
+    Computes the mathematical Indifference Point (Break-Even Deduction Threshold).
+    Finds the exact total deductions D* such that:
+        Tax_Old(gross_salary - D*) == Tax_New(gross_salary - std_ded)
+    """
+    if gross_salary <= 0:
+        return 0.0
+
+    dummy_input = TaxpayerInput(
+        gross_salary=gross_salary,
+        basic_salary=gross_salary * 0.5,
+        age_category=age_category,
+        financial_year=fy,
+    )
+    new_res = compute_new_regime(dummy_input, fy=fy)
+    target_tax = new_res.total_tax
+
+    if age_category == AgeCategory.SUPER_SENIOR_ABOVE_80:
+        slabs = r24.SLABS_OLD_SUPER_SENIOR
+    elif age_category == AgeCategory.SENIOR_60_TO_80:
+        slabs = r24.SLABS_OLD_SENIOR
+    else:
+        slabs = r24.SLABS_OLD_BELOW_60
+
+    low, high = 0.0, float(gross_salary)
+    for _ in range(40):
+        mid = (low + high) / 2.0
+        tax, _ = compute_slab_tax(mid, slabs)
+        if mid <= r24.REBATE_87A_THRESHOLD_OLD:
+            tax = max(0.0, tax - min(tax, r24.REBATE_87A_MAX_OLD))
+        tot = round(tax * 1.04)
+        if tot > target_tax:
+            high = mid
+        else:
+            low = mid
+
+    target_taxable = (low + high) / 2.0
+    return max(0.0, float(round(gross_salary - target_taxable)))
+
+
 def compute_tax(user_input: TaxpayerInput, fy: str = "2024-25") -> TaxResult:
     """
     Computes tax under both Old and New regimes, identifies the recommended
@@ -370,6 +415,27 @@ def compute_tax(user_input: TaxpayerInput, fy: str = "2024-25") -> TaxResult:
         tot_80d = headroom["section_80d_self"] + headroom["section_80d_parents"]
         advisory_notes.append(f"You have ₹{tot_80d:,.0f} additional headroom for health insurance under Section 80D.")
 
+    # Calculate break-even indifference deduction threshold
+    break_even_d = compute_break_even_deductions(
+        gross_salary=user_input.gross_salary,
+        fy=fy,
+        age_category=user_input.age_category,
+    )
+    current_deductions = old_comp.deductions.total
+    break_even_gap = max(0.0, break_even_d - current_deductions)
+
+    if current_deductions >= break_even_d:
+        be_analysis = (
+            f"Your current total deductions of ₹{current_deductions:,.0f} exceed the break-even "
+            f"threshold of ₹{break_even_d:,.0f}. The Old Regime is mathematically optimal."
+        )
+    else:
+        be_analysis = (
+            f"The break-even deduction threshold is ₹{break_even_d:,.0f}. With your current deductions "
+            f"of ₹{current_deductions:,.0f}, you need an additional ₹{break_even_gap:,.0f} in eligible "
+            f"deductions (HRA, 80C, 80D, NPS) for the Old Regime to match or beat the New Regime."
+        )
+
     return TaxResult(
         old_regime=old_comp,
         new_regime=new_comp,
@@ -378,4 +444,7 @@ def compute_tax(user_input: TaxpayerInput, fy: str = "2024-25") -> TaxResult:
         explanation=reason,
         deduction_headroom=headroom,
         advisory_notes=advisory_notes,
+        break_even_deductions=break_even_d,
+        break_even_gap=break_even_gap,
+        break_even_analysis=be_analysis,
     )
