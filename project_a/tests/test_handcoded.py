@@ -337,3 +337,14 @@ def test_official_case_30_ultra_hni_marginal_relief_check():
     res = compute_tax(inp, "2024-25")
     assert res.old_regime.marginal_relief >= 0
     assert res.new_regime.marginal_relief >= 0
+
+
+def test_proactive_tax_advisor_and_headroom():
+    from project_a.tax_advisor import generate_proactive_advice
+    inp = TaxpayerInput(gross_salary=1500000, basic_salary=750000, investment_80c=50000)
+    res = compute_tax(inp, "2024-25")
+    assert res.deduction_headroom["section_80c"] == 100000
+    assert res.deduction_headroom["section_80ccd_1b"] == 50000
+    advice = generate_proactive_advice(inp, res)
+    assert len(advice) >= 1
+    assert any(any(k in a.lower() for k in ["nps", "80c", "regime", "deduction", "tax"]) for a in advice)

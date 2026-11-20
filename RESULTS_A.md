@@ -127,7 +127,8 @@
 |-----------|------|---------------|
 | Tax computation engine | **Rule** | 100% accuracy, 0 cost, <1ms, fully auditable. No LLM adds value here. |
 | NLP input parser | **LLM** | Only component where LLM is irreplaceable. Handles Hinglish, ambiguity, missing fields. |
-| Explanation generator | **Rule** (templates) | Templates like "Section 80C deduction: min(₹{investment}, ₹1,50,000) = ₹{result}" are deterministic and accurate. LLM adds style but not substance. |
+| Proactive Tax Advisor | **Hybrid** (Rules $\to$ LLM) | Deterministic engine computes exact statutory headroom (80C, NPS, 80D); LLM synthesizes personalized strategies before March 31. |
+| Explanation generator | **Rule** (templates) | Templates like "Section 80C deduction: min(₹{investment}, ₹1,50,000) = ₹{result}" are deterministic and accurate. |
 | Regime recommendation | **Rule** | Compare old_total vs new_total. Arithmetic, not judgment. |
 | FY configuration | **Rule** (config) | Tax rules as data (YAML/JSON/Python dict). Update yearly by editing constants. |
 

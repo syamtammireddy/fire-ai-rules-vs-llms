@@ -352,10 +352,30 @@ def compute_tax(user_input: TaxpayerInput, fy: str = "2024-25") -> TaxResult:
             f"You may choose either regime."
         )
 
+    # Calculate deduction headroom & proactive advisory notes
+    headroom = {
+        "section_80c": max(0.0, 150_000.0 - user_input.investment_80c),
+        "section_80ccd_1b": max(0.0, 50_000.0 - user_input.investment_80ccd_1b),
+        "section_80d_self": max(0.0, (50_000.0 if user_input.age_category != AgeCategory.BELOW_60 else 25_000.0) - user_input.health_insurance_self),
+        "section_80d_parents": max(0.0, (50_000.0 if user_input.parents_are_senior_citizens else 25_000.0) - user_input.health_insurance_parents),
+        "home_loan_interest_24b": max(0.0, 200_000.0 - user_input.home_loan_interest),
+    }
+
+    advisory_notes = []
+    if headroom["section_80c"] > 0:
+        advisory_notes.append(f"You have ₹{headroom['section_80c']:,.0f} unused headroom under Section 80C (PPF/ELSS/EPF).")
+    if headroom["section_80ccd_1b"] > 0:
+        advisory_notes.append(f"You have ₹{headroom['section_80ccd_1b']:,.0f} unused headroom under Section 80CCD(1B) for NPS.")
+    if headroom["section_80d_self"] > 0 or headroom["section_80d_parents"] > 0:
+        tot_80d = headroom["section_80d_self"] + headroom["section_80d_parents"]
+        advisory_notes.append(f"You have ₹{tot_80d:,.0f} additional headroom for health insurance under Section 80D.")
+
     return TaxResult(
         old_regime=old_comp,
         new_regime=new_comp,
         recommended_regime=rec,
         savings=savings,
         explanation=reason,
+        deduction_headroom=headroom,
+        advisory_notes=advisory_notes,
     )

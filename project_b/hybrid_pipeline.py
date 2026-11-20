@@ -95,9 +95,14 @@ class HybridDataQualityPipeline:
         null_spikes = self.stats.detect_null_spikes_zscore(df, col_name="incident_zip")
         metrics.layer2_flags["null_spike_agencies"] = len(null_spikes)
 
-        # 2. Near-duplicate fuzzy candidates
+        # 2. Near-duplicate fuzzy candidates (with spatio-temporal bucketing)
         fuzzy_pairs = self.stats.detect_near_duplicates_fuzzy(df, similarity_threshold=85)
         metrics.layer2_flags["near_duplicate_candidate_pairs"] = len(fuzzy_pairs)
+
+        # 3. Multivariate co-occurrence anomalies (Agency vs Complaint Type priors)
+        cooc_flags = self.stats.detect_multivariate_cooccurrence_anomalies(df)
+        metrics.layer2_flags["cooccurrence_anomalies"] = len(cooc_flags)
+        metrics.quarantined_row_indices.update(cooc_flags)
 
         # =========================================================================
         # LAYER 3: Targeted LLM Semantic Review (Flagged Rows Only, Controlled Cost)

@@ -147,6 +147,8 @@ class TaxResult(BaseModel):
     recommended_regime: str = ""
     savings: float = 0  # positive = new regime saves money
     explanation: str = ""
+    deduction_headroom: dict[str, float] = Field(default_factory=dict)
+    advisory_notes: list[str] = Field(default_factory=list)
 
 
 class ClarifyingQuestion(BaseModel):

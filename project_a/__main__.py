@@ -35,6 +35,8 @@ def main():
     tax_p.add_argument("--home-loan", type=float, default=0.0, help="Section 24(b) home loan interest")
     tax_p.add_argument("--fy", type=str, default="2024-25", choices=["2024-25", "2025-26"], help="Financial Year")
 
+    tax_p.add_argument("--advisor", action="store_true", help="Generate proactive tax optimization recommendations")
+
     # Benchmark command
     subparsers.add_parser("benchmark", help="Run Project A empirical benchmarks")
 
@@ -105,6 +107,14 @@ def main():
         print(f" RECOMMENDATION:      {res.recommended_regime}")
         print(f" POTENTIAL SAVINGS:   ₹{res.savings:,.0f}")
         print(f" Summary: {res.explanation}")
+
+        if args.advisor or True:
+            from project_a.tax_advisor import generate_proactive_advice
+            print("--------------------------------------------------")
+            print(" 💡 PROACTIVE TAX OPTIMIZATION ADVICE:")
+            advice = generate_proactive_advice(inp, res)
+            for idx, pt in enumerate(advice, 1):
+                print(f"   {idx}. {pt}")
         print(f"==================================================")
     else:
         parser.print_help()

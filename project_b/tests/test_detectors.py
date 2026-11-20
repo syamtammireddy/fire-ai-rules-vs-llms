@@ -72,3 +72,18 @@ def test_stat_detect_null_spike(sample_data, stats, injector):
     corrupted, gt = injector.inject_null_spike(sample_data, target_agency="NYPD", rate=0.80)
     spikes = stats.detect_null_spikes_zscore(corrupted, col_name="incident_zip")
     assert any(s["agency"] == "NYPD" for s in spikes)
+
+
+def test_stat_detect_cooccurrence_anomaly(sample_data, stats):
+    corrupted = sample_data.copy()
+    # Inject impossible agency-complaint pairing
+    corrupted.at[0, "agency"] = "NYPD"
+    corrupted.at[0, "complaint_type"] = "HEAT/HOT WATER"  # HPD's complaint
+    anomalies = stats.detect_multivariate_cooccurrence_anomalies(corrupted)
+    assert 0 in anomalies
+
+
+def test_stat_spatiotemporal_fuzzy_dedup(sample_data, stats, injector):
+    corrupted, gt = injector.inject_near_duplicates(sample_data.head(500), rate=0.05)
+    pairs = stats.detect_near_duplicates_fuzzy(corrupted, similarity_threshold=80)
+    assert isinstance(pairs, list)

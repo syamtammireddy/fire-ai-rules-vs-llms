@@ -17,7 +17,8 @@
 | **Old vs New regime comparison** | **Rule** | Run both computations, compare totals. No judgment needed. | N/A. |
 | **NLP input parsing** | **LLM** | Converting "mera salary 12 lakh hai, Mumbai mein rent deta hoon" into `{basic_salary: 600000, city: "metro", ...}` requires language understanding that rules cannot provide. This is where LLM genuinely earns its cost. | Parsing accuracy: ~88% (LLM) vs impossible (rule). Latency: ~600ms. Cost: ~$0.08/request. |
 | **Missing-info detection** | **LLM** | Identifying what fields are absent from free text and generating clarifying questions requires comprehension. | Questions generated for 95% of incomplete inputs. No false completions. |
-| **Explanation generation** | **Hybrid** | The tax computation uses rules for correctness, then formats the breakdown with LLM for natural-language explanation. Alternative: template-based explanations (pure rule) achieve 90% quality at 0 cost. | LLM explanation quality: subjectively better. But template-based is recommended for production (deterministic, free). |
+| **Explanation generation** | **Rule** (templates) | Templates like "Section 80C deduction: min(₹{investment}, ₹1,50,000) = ₹{result}" are deterministic, instant, and $0 cost. | 100% auditability, 0 latency. |
+| **Proactive Tax Advisory** | **Hybrid** (Rules $\to$ LLM) | Deterministic engine computes exact statutory headroom (80C, 80CCD(1B), 80D, 24b); LLM synthesizes personalized tax-saving moves. | 100% exact math, high-value actionable advice before March 31. |
 | **Law change handling** | **Rule** | Updating `tax_rules_fy2025.py` constants took ~10 minutes and 15 LOC. LLM-query required prompt update (~5 min). LLM-compiled required re-generation + review (~20 min). No silent failures with rules. | Time: 10 min (rule), 5 min (LLM query), 20 min (LLM compiled). Silent failures: 0 (rule), 3 (LLM query), 1 (LLM compiled). |
 
 ### Project A — Final Architecture Recommendation

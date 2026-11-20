@@ -15,6 +15,7 @@ from rapidfuzz import fuzz
 class StatisticalDetectors:
     def __init__(self, baseline_df: pd.DataFrame | None = None):
         self.baseline_null_rates: Dict[str, Dict[str, float]] = {}  # agency -> {col -> mean_null_rate}
+        self.valid_agency_complaints: Set[Tuple[str, str]] = set()
         if baseline_df is not None:
             self.fit_baseline(baseline_df)
 
@@ -26,8 +27,14 @@ class StatisticalDetectors:
                 "location_type": float(grp["location_type"].isnull().mean()),
                 "latitude": float(grp["latitude"].isnull().mean()),
             }
+        # Learn valid Agency -> Complaint Type historical associations
+        clean_pairs = df[["agency", "complaint_type"]].dropna().drop_duplicates()
+        for _, row in clean_pairs.iterrows():
+            ag = str(row["agency"]).strip().upper()
+            ct = str(row["complaint_type"]).strip()
+            self.valid_agency_complaints.add((ag, ct))
 
-    # 6. Near-Duplicate Detection using Fuzzy String Matching
+    # 6. Near-Duplicate Detection using Spatio-Temporal Bucketing + Fuzzy String Matching
     def detect_near_duplicates_fuzzy(
         self,
         df: pd.DataFrame,
@@ -36,7 +43,8 @@ class StatisticalDetectors:
     ) -> List[Tuple[int, int, float]]:
         """
         Detects near-duplicates using RapidFuzz Levenshtein token similarity.
-        Compares requests within an index window or grouped by borough/complaint.
+        Applies Spatio-Temporal Bucketing (Date + ZIP/Spatial Cell + Complaint)
+        to prevent O(N^2) combinatorial explosion on large batches.
         Returns: list of (idx1, idx2, similarity_score)
         """
         flagged_pairs = []
@@ -44,27 +52,27 @@ class StatisticalDetectors:
         if n < 2:
             return []
 
-        # Sort by created_date to compare temporally close requests
-        sorted_df = df.sort_values(by="created_date")
-        indices = sorted_df.index.tolist()
+        # Partition indices into discrete spatio-temporal buckets
+        buckets: Dict[str, List[int]] = {}
+        for idx in df.index:
+            t = str(df.at[idx, "created_date"] or "")[:10]  # day
+            c = str(df.at[idx, "complaint_type"] or "").strip().lower()
+            z = str(df.at[idx, "incident_zip"] or "").strip()
+            b_key = f"{t}_{c}_{z}"
+            buckets.setdefault(b_key, []).append(idx)
 
-        # Windowed comparison to keep O(n * window) rather than O(n^2)
-        window = min(max_candidate_window, n)
-        for i in range(n):
-            idx1 = indices[i]
-            t1 = str(df.at[idx1, "created_date"] or "")[:13] # hourly window
-            c1 = str(df.at[idx1, "complaint_type"] or "")
-            d1 = str(df.at[idx1, "descriptor"] or "")
-            z1 = str(df.at[idx1, "incident_zip"] or "")
-
-            for j in range(i + 1, min(i + window, n)):
-                idx2 = indices[j]
-                t2 = str(df.at[idx2, "created_date"] or "")[:13]
-                c2 = str(df.at[idx2, "complaint_type"] or "")
-                z2 = str(df.at[idx2, "incident_zip"] or "")
-
-                # Quick prune: must match complaint type, zip, and hour
-                if c1 == c2 and z1 == z2 and t1 == t2:
+        # Compare only within candidate buckets
+        for bucket_indices in buckets.values():
+            b_len = len(bucket_indices)
+            if b_len < 2:
+                continue
+            # Cap comparisons per bucket to bounded constant
+            limit = min(b_len, max_candidate_window)
+            for i in range(limit):
+                idx1 = bucket_indices[i]
+                d1 = str(df.at[idx1, "descriptor"] or "")
+                for j in range(i + 1, limit):
+                    idx2 = bucket_indices[j]
                     d2 = str(df.at[idx2, "descriptor"] or "")
                     score = fuzz.token_sort_ratio(d1, d2)
                     if score >= similarity_threshold:
@@ -133,4 +141,22 @@ class StatisticalDetectors:
                     flagged.append(idx)
             except (ValueError, TypeError):
                 continue
+        return flagged
+
+    # 5. Multivariate Co-Occurrence Anomaly Detection
+    def detect_multivariate_cooccurrence_anomalies(self, df: pd.DataFrame) -> List[int]:
+        """
+        Flags rows where Agency vs Complaint Type combinations violate learned historical priors
+        (e.g., NYPD handling HEAT/HOT WATER or HPD handling Illegal Parking).
+        """
+        if not self.valid_agency_complaints:
+            return []
+
+        flagged = []
+        for idx in df.index:
+            ag = str(df.at[idx, "agency"] or "").strip().upper()
+            ct = str(df.at[idx, "complaint_type"] or "").strip()
+            if ag and ct:
+                if (ag, ct) not in self.valid_agency_complaints:
+                    flagged.append(idx)
         return flagged

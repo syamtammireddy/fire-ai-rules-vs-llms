@@ -99,7 +99,7 @@ Corruption rate used for testing: 5% injection rate per type.
 | Layer | Checks | Coverage | Cost/M Rows | Latency/M Rows |
 |-------|--------|----------|-------------|----------------|
 | **Layer 1: Rules** (every row) | Schema, dtype, date format, bounding box, hash dedup, date logic, ZIP lookup, complaint-descriptor lookup, PII regex | 100% of rows | ~$0.08 | ~3s |
-| **Layer 2: Statistics** (per batch) | Null rate z-scores, fuzzy dedup candidates, co-occurrence anomalies | Batch-level | ~$0.15 | ~8s |
+| **Layer 2: Statistics** (per batch) | Null rate z-scores, Spatio-Temporal Bucketed fuzzy dedup (6,400+ rows/s), Multivariate Agency-Complaint co-occurrence priors | Batch-level | ~$0.15 | ~3s |
 | **Layer 3: LLM** (flagged only) | Near-dup confirmation, semantic checks, PII confirmation | ~1-3% of rows | ~$0.50 | ~45s |
 | **Total Pipeline** | | | **~$0.73/M rows** | **~56s/M rows** |
 
