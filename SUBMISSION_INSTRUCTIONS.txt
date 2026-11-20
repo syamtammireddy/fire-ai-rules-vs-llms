@@ -1,0 +1,134 @@
+================================================================================
+FIRE AI · RULES VS LLMS TAKE-HOME ASSIGNMENT — SUBMISSION & INSTRUCTIONS
+================================================================================
+
+Candidate:      Syam Tammireddy
+Email:          syamtammireddi@gmail.com
+Repository:     https://github.com/syamtammireddy/fire-ai-rules-vs-llms
+Branch:         main
+Submission Date: November 2026
+
+================================================================================
+1. REPOSITORY LINK
+================================================================================
+
+GitHub: https://github.com/syamtammireddy/fire-ai-rules-vs-llms.git
+
+To clone:
+  git clone https://github.com/syamtammireddy/fire-ai-rules-vs-llms.git
+  cd fire-ai-rules-vs-llms
+
+================================================================================
+2. ENVIRONMENT SETUP & DEPENDENCIES
+================================================================================
+
+Prerequisites:
+  - Python 3.10+ (tested on Python 3.12)
+  - Google Gemini API Key (free tier: gemini-3.5-flash-lite)
+  - Git & Make
+
+Quick Setup:
+  1. Create virtual environment & install dependencies:
+       python3 -m venv .venv
+       source .venv/bin/activate
+       pip install -e .
+
+  2. Configure environment credentials:
+       cp .env.example .env
+       # Open .env and add your GEMINI_API_KEY:
+       # GEMINI_API_KEY=your_actual_gemini_api_key_here
+
+================================================================================
+3. SINGLE-COMMAND REPRODUCTION
+================================================================================
+
+To run the entire suite (all 62 unit tests, Project A benchmarks, and Project B benchmarks):
+
+  make all
+
+Or run individual steps:
+  make test          # Run all 62 pytest unit tests (100% passing)
+  make test-a        # Run Project A unit tests (37 tests)
+  make test-b        # Run Project B unit tests (25 tests)
+  make benchmark-a   # Run Project A empirical tax benchmark (Rules vs LLM Query vs LLM Compiled)
+  make benchmark-b   # Run Project B data quality detector benchmarks
+  make profile-b     # Run NYC 311 2023 dataset profiler
+
+================================================================================
+4. INTERACTIVE CLI COMMANDS (READY FOR LIVE INTERVIEW DEFENSE)
+================================================================================
+
+PROJECT A — Indian Income-Tax Engine & Strategic Advisor:
+
+  1. Plain-Language Multi-Lingual Input (Hinglish / Casual):
+     python -m project_a tax --text "Mera salary 15 LPA hai, Mumbai me rent 30k bharta hu"
+
+  2. Incomplete Input (Automatically triggers clarifying questions):
+     python -m project_a tax --text "I pay 30,000 rent in Mumbai. How much tax do I save?"
+
+  3. Structured Tax Calculation & Break-Even Indifference Point (FY 2024-25):
+     python -m project_a tax --gross 1500000 --rent 360000 --metro --c80 150000 --fy 2024-25
+
+  4. Budget 2025 Tax Law Change Comparison (FY 2025-26):
+     python -m project_a tax --gross 1500000 --rent 360000 --metro --c80 150000 --fy 2025-26
+
+PROJECT B — NYC 311 3-Tier Hybrid Quality Pipeline:
+
+  1. Run 3-Tier Pipeline (Rules -> Stats -> LLM) on 1,000 records:
+     python -m project_b pipeline --batch 1000
+
+  2. Profile NYC 311 Raw Dataset (25,000 real CY 2023 records):
+     python -m project_b profile
+
+  3. Run Detector Benchmark Harness:
+     python -m project_b benchmark
+
+================================================================================
+5. CORE DELIVERABLES & DOCUMENTATION ARTIFACTS
+================================================================================
+
+- README.md:
+    Project overview, quick start, architecture summaries, and reproduction steps.
+
+- RESULTS_A.md:
+    Project A comparison table (Hand-Coded vs LLM Query vs LLM Compiled), NLP parser
+    metrics, Finance Act 2025 Budget change log, and the 2-page production architecture
+    for 100,000 concurrent users.
+
+- RESULTS_B.md:
+    NYC 311 data profile report, 12-corruption detector benchmark matrix, 3-tier
+    hybrid funnel analysis, and the 50M rows/day across 120 customers scale
+    architecture ($565/day vs $500,000/day pure LLM).
+
+- DECISION_MATRIX.md:
+    Component-by-component defense backed by empirical numbers, plus our v3
+    engineering upgrades (break-even indifference solver, vectorized rules,
+    and multi-tenant pipeline config).
+
+- AI_USAGE.md:
+    First-person log detailing how I used an AI coding assistant as an accelerator,
+    retained complete ownership of architecture and trade-offs, and debugged a critical
+    surcharge marginal relief error.
+
+================================================================================
+6. KEY ARCHITECTURAL TAKEAWAYS
+================================================================================
+
+- Project A (Tax Engine):
+    * Pure deterministic rules are mathematically unshakeable: 100% accuracy,
+      100% determinism, 0.04ms latency, $0 cost, and statutory clause-level auditability.
+    * LLM at query time fails on multi-tier surcharge marginal relief (~35% error rate),
+      suffers from non-determinism, and incurs ~$15,000/month at 100k users.
+    * NLP Parsing is the single place in Project A where LLMs earn their cost:
+      parsing unstructured Hinglish/casual text and generating clarifying questions.
+    * Indifference Point Solver: Mathematically computes the exact deduction threshold
+      D* needed for Old Regime to beat New Regime (e.g. ₹4,58,332 at 15 LPA).
+
+- Project B (NYC 311 Data Quality):
+    * Running LLMs on 50M rows/day costs $500,000/day ($15M/month).
+    * The 3-Tier Hybrid Funnel (Layer 1 Rules on 100% -> Layer 2 Stats on batches ->
+      Layer 3 LLM on 0.1%-1% ambiguous candidates) cuts operational cost to $565/day
+      ($17,000/month) while catching 100% of syntactic and semantic corruptions.
+    * Vectorized Rules & Spatio-Temporal Bucketing achieve >280,000 rows/sec on Layer 1
+      and boost fuzzy deduplication from 329 to 6,473 rows/sec.
+================================================================================
